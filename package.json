@@ -1,0 +1,19 @@
+{
+  "name": "deploy-programs",
+  "version": "1.0.0",
+  "description": "Use Rsync to copy files to remote server with command line subdirectory selections",
+  "main": "deploy-programs.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/tqwhite/qtools-deploy-programs.git"
+  },
+  "author": "TQ White II",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/tqwhite/qtools-deploy-programs/issues"
+  },
+  "homepage": "https://github.com/tqwhite/qtools-deploy-programs#readme"
+}
