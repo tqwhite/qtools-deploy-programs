@@ -1,0 +1,15 @@
+{
+  "name": "copy-files",
+  "version": "1.0.0",
+  "description": "execute rsync copy for selectedTransferSetList",
+  "main": "copy-files.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "TQ White II",
+  "license": "ISC",
+  "dependencies": {
+    "qtools-asynchronous-pipe-plus": "^1.0.1",
+    "rsync": "^0.6.1"
+  }
+}

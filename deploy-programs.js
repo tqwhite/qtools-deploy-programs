@@ -1,45 +1,64 @@
 #!/usr/bin/env node
 'use strict';
-// const qtoolsGen = require('qtools');
-// const qtools = new qtoolsGen(module, { updatePrototypes: true });
-
-//npm i qtools-functional-library
-//npm i qtools-config-file-processor
-//npm i qtools-parse-command-line
-
-// const configFileProcessor = require('qtools-config-file-processor');
-//const configSegmentName=require('path').basename(__filename).replace(/\.\w+$/, '');
-//const configPath=path.join(schUtilitiesProjectRoot, 'configs','instanceSpecific', PROJECT_NAMEConfigDirName, 'systemConfig.ini')
-//const config = configFileProcessor.getConfig(configPath)['MODULE_NAME']; 
-
-// const commandLineParser = require('qtools-parse-command-line');
-// const commandLineParameters = commandLineParser.getParameters();
-
 const qt = require('qtools-functional-library');
-//console.dir(qt.help());
+const xLog = require('./lib/x-log');
 
-console.log(`HELLO FROM: ${__filename}`);
+const buildTransferSetList = require('./lib/build-transfer-set-list');
+const buildSshRemoteSetLists = require('./lib/build-ssh-remote-set-lists');
+const copyFiles = require('./lib/copy-files');
 
 //START OF moduleFunction() ============================================================
 
-const moduleFunction = function(args={}) {
+const moduleFunction = function(args = {}) {
+	process.global = {};
+	process.global.xLog = xLog;
 
-	const workingFunctionActual=localArgs=>operatingArgs=>{
+	const configSegmentName = require('path')
+		.basename(__filename)
+		.replace(/\.\w+$/, '');
+	const moduleConfig = require('./lib/assemble-configuration-show-help-maybe-exit')(
+		{ configSegmentName, terminationFunction:process.exit }
+	);
 	
-		return "hello";
+	if (moduleConfig.switches.writeBoilerplateConfig){
 	
+console.dir({['moduleConfig']:moduleConfig});
+
+console.log(`\n=-=============   writeBoilerplateConfig  ========================= [deploy-programs.js.moduleFunction]\n`);
+writeBoilerplateConfig({filePath:moduleConfig.qtGetSurePath('fileList[0]')});
+
+	process.exit(0);
 	}
-	
 
-	const workingFunction=workingFunctionActual(Object.assign({}, args));
+	const selectedTransferSetList = buildTransferSetList({ moduleConfig });
 
-	return ({workingFunction});
+	const sshRemoteSetLists = buildSshRemoteSetLists({ moduleConfig });
+
+	const result = copyFiles(
+		{ sshRemoteSetLists, selectedTransferSetList, moduleConfig },
+		(err, result) => {
+			if (err) {
+				xLog.status(`Processing finished with errors ---------------------`);
+				xLog.error(err.qtDump({ returnString: true, label: 'ERRORS' }));
+			}
+			if (result) {
+				xLog.status(`Processing complete ---------------------`);
+
+				if (moduleConfig.switches.json) {
+					process.stdout.write(JSON.stringify(result, '', '\t'));
+				}
+				
+				if (!moduleConfig.switches.noReport) {
+					process.stdout.write(
+						result.qtDump({ noSuffix: true, returnString: true })
+					);
+				}
+			}
+		}
+	);
 };
 
 //END OF moduleFunction() ============================================================
 
-module.exports = args=>new moduleFunction(args)
-//module.exports = moduleFunction;
-//module.exports = new moduleFunction();
-//moduleFunction().workingFunction().qtDump();
+moduleFunction();
 

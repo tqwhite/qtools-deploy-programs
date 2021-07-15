@@ -1,0 +1,11 @@
+{
+  "name": "assemble-configuration-show-help-maybe-exit",
+  "version": "1.0.0",
+  "description": "find config, evaluate command line switches, show help and quit if error or -help is requested or return configuration",
+  "main": "assemble-configuration-show-help-maybe-exit.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "TQ White II",
+  "license": "ISC"
+}
