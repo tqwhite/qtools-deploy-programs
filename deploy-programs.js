@@ -3,9 +3,14 @@
 const qt = require('qtools-functional-library');
 const xLog = require('./lib/x-log');
 
+const asynchronousPipePlus = new require('qtools-asynchronous-pipe-plus')();
+const pipeRunner = asynchronousPipePlus.pipeRunner;
+const taskListPlus = asynchronousPipePlus.taskListPlus;
+
 const buildTransferSetList = require('./lib/build-transfer-set-list');
 const buildSshRemoteSetLists = require('./lib/build-ssh-remote-set-lists');
 const copyFiles = require('./lib/copy-files');
+const listActions = require('./lib/list-actions');
 
 //START OF moduleFunction() ============================================================
 
@@ -16,46 +21,72 @@ const moduleFunction = function(args = {}) {
 	const configSegmentName = require('path')
 		.basename(__filename)
 		.replace(/\.\w+$/, '');
-	const moduleConfig = require('./lib/assemble-configuration-show-help-maybe-exit')(
-		{ configSegmentName, terminationFunction:process.exit }
-	);
+
+	const taskList = [];
 	
-	if (moduleConfig.switches.writeBoilerplateConfig){
+	taskList.push((args, next) => {
+		const localCallback = (err, moduleConfig) => {
+			next(err, { ...args, moduleConfig });
+		};
+
+		require('./lib/assemble-configuration-show-help-maybe-exit')({
+			configSegmentName,
+			terminationFunction: process.exit,
+			callback: localCallback
+		});
+	});
 	
-console.dir({['moduleConfig']:moduleConfig});
+	taskList.push((args, next) => {
+		const { moduleConfig } = args;
+		const localCallback = (err, copyResult) => {
+			next(err, { ...args, copyResult });
+		};
 
-console.log(`\n=-=============   writeBoilerplateConfig  ========================= [deploy-programs.js.moduleFunction]\n`);
-writeBoilerplateConfig({filePath:moduleConfig.qtGetSurePath('fileList[0]')});
-
-	process.exit(0);
-	}
-
-	const selectedTransferSetList = buildTransferSetList({ moduleConfig });
-
-	const sshRemoteSetLists = buildSshRemoteSetLists({ moduleConfig });
-
-	const result = copyFiles(
-		{ sshRemoteSetLists, selectedTransferSetList, moduleConfig },
-		(err, result) => {
-			if (err) {
-				xLog.status(`Processing finished with errors ---------------------`);
-				xLog.error(err.qtDump({ returnString: true, label: 'ERRORS' }));
-			}
-			if (result) {
-				xLog.status(`Processing complete ---------------------`);
-
-				if (moduleConfig.switches.json) {
-					process.stdout.write(JSON.stringify(result, '', '\t'));
-				}
-				
-				if (!moduleConfig.switches.noReport) {
-					process.stdout.write(
-						result.qtDump({ noSuffix: true, returnString: true })
-					);
-				}
-			}
+		if (moduleConfig.switches.listActions) {
+			listActions({
+				moduleConfig
+			});
+			process.exit(0);
 		}
-	);
+
+		const selectedTransferSetList = buildTransferSetList({ moduleConfig });
+
+		const sshRemoteSetLists = buildSshRemoteSetLists({ moduleConfig });
+
+		const result = copyFiles(
+			{ sshRemoteSetLists, selectedTransferSetList, moduleConfig },
+			localCallback
+		);
+	});
+	
+	const initialData = {};
+	asynchronousPipePlus.pipeRunner(taskList, initialData, (err, result) => {
+		const { moduleConfig, copyResult } = result;
+		if (err=='skipRestOfPipe'){
+			process.exit(0);
+		}
+		
+		if (err) {
+			xLog.error(err.qtDump({ noSuffix: true, returnString: true, label: 'ERRORS' }));
+			process.exit(1);
+		}
+		if (result) {
+
+			if (moduleConfig.switches.json) {
+				process.stdout.write(JSON.stringify(copyResult, '', '\t'));
+			}
+
+			if (!moduleConfig.switches.noReport) {
+				process.stdout.write(
+					copyResult
+						.qtDump({ noSuffix: true, returnString: true })
+						.replace(/\\n/g, '')
+				);
+				xLog.status(`Processing complete ---------------------`);
+			}
+			process.exit(0);
+		}
+	});
 };
 
 //END OF moduleFunction() ============================================================

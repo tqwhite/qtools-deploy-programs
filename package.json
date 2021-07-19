@@ -17,6 +17,7 @@
   },
   "homepage": "https://github.com/tqwhite/qtools-deploy-programs#readme",
   "dependencies": {
+    "qtools-asynchronous-pipe-plus": "^1.0.1",
     "qtools-config-file-processor": "^1.0.8",
     "qtools-functional-library": "^1.1.7",
     "qtools-parse-command-line": "^1.0.5",

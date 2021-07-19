@@ -7,5 +7,8 @@
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "TQ White II",
-  "license": "ISC"
+  "license": "ISC",
+  "dependencies": {
+    "qtools-asynchronous-pipe-plus": "^1.0.1"
+  }
 }
