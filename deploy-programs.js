@@ -7,7 +7,7 @@ const asynchronousPipePlus = new require('qtools-asynchronous-pipe-plus')();
 const pipeRunner = asynchronousPipePlus.pipeRunner;
 const taskListPlus = asynchronousPipePlus.taskListPlus;
 
-const buildTransferSetList = require('./lib/build-transfer-set-list');
+const buildActionSetList = require('./lib/build-action-set-list');
 const buildSshRemoteSetLists = require('./lib/build-ssh-remote-set-lists');
 const copyFiles = require('./lib/copy-files');
 const listActions = require('./lib/list-actions');
@@ -24,6 +24,8 @@ const moduleFunction = function(args = {}) {
 
 	const taskList = [];
 	
+	const metadataFileName='.deployProgramsMetadata.ini';
+	
 	taskList.push((args, next) => {
 		const localCallback = (err, moduleConfig) => {
 			next(err, { ...args, moduleConfig });
@@ -31,61 +33,97 @@ const moduleFunction = function(args = {}) {
 
 		require('./lib/assemble-configuration-show-help-maybe-exit')({
 			configSegmentName,
+			metadataFileName,
 			terminationFunction: process.exit,
 			callback: localCallback
 		});
 	});
 	
+	
+	
 	taskList.push((args, next) => {
 		const { moduleConfig } = args;
+		const {switches={}}=moduleConfig;
+		
+		if (
+			switches.listActions ||
+			!moduleConfig.qtGetSurePath('values.actions.length')
+		) {
+			listActions({
+				moduleConfig
+			});
+			next('skipRestOfPipe');
+			return;
+		}
+
+		if (
+			switches.prod &&
+			!switches.forceProd
+		) {
+			const result = require('./lib/confirm-prod')({
+				callback: (err, confirmation) => {
+					if (!confirmation) {
+						next('skipRestOfPipe');
+						return;
+					}
+					next(err, args);
+				}
+			});
+			return;
+		}
+		
+		next('', args);
+	});
+	
+	taskList.push((args, next) => {
+		const { moduleConfig } = args;
+		
+		const selectedActionSetList = buildActionSetList({ moduleConfig });
+
+		const sshRemoteSetLists = buildSshRemoteSetLists({ moduleConfig });
+
+		//EXECUTE ACTIONS ------------------------------------------------
+
 		const localCallback = (err, copyResult) => {
 			next(err, { ...args, copyResult });
 		};
 
-		if (moduleConfig.switches.listActions) {
-			listActions({
-				moduleConfig
-			});
-			process.exit(0);
-		}
-
-		const selectedTransferSetList = buildTransferSetList({ moduleConfig });
-
-		const sshRemoteSetLists = buildSshRemoteSetLists({ moduleConfig });
-
 		const result = copyFiles(
-			{ sshRemoteSetLists, selectedTransferSetList, moduleConfig },
+			{ sshRemoteSetLists, selectedActionSetList, moduleConfig },
 			localCallback
 		);
+
+		//EXECUTE ACTIONS ------------------------------------------------
 	});
-	
+
+//RUN THE PROCESS ============================================================	
+
 	const initialData = {};
-	asynchronousPipePlus.pipeRunner(taskList, initialData, (err, result) => {
-		const { moduleConfig, copyResult } = result;
-		if (err=='skipRestOfPipe'){
-			process.exit(0);
-		}
-		
-		if (err) {
-			xLog.error(err.qtDump({ noSuffix: true, returnString: true, label: 'ERRORS' }));
-			process.exit(1);
-		}
+	asynchronousPipePlus.pipeRunner(taskList, initialData, (err, result = {}) => {
+
+
 		if (result) {
-
-			if (moduleConfig.switches.json) {
+			const { moduleConfig={}, copyResult } = result;
+				const {switches={}}=moduleConfig;
+			if (switches.json) {
 				process.stdout.write(JSON.stringify(copyResult, '', '\t'));
-			}
-
-			if (!moduleConfig.switches.noReport) {
-				process.stdout.write(
+			} else if (!switches.noReport) {
+				typeof(copyResult)=='object' && process.stdout.write(
 					copyResult
 						.qtDump({ noSuffix: true, returnString: true })
 						.replace(/\\n/g, '')
 				);
-				xLog.status(`Processing complete ---------------------`);
+				xLog.status(`\nProcessing complete ---------------------`);
 			}
-			process.exit(0);
 		}
+
+		if (err && err != 'skipRestOfPipe') {
+			xLog.error(
+				err.qtDump({ noSuffix: true, returnString: true, label: 'ERRORS' })
+			);
+			process.exit(1);
+		}
+			process.exit(0);
 	});
 };
 

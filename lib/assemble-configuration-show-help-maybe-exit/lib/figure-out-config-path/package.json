@@ -1,0 +1,14 @@
+{
+  "name": "figure-out-config-path",
+  "version": "1.0.0",
+  "description": "look for deploy-program metadata file and extract appropriate alias if present",
+  "main": "figure-out-config-path.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "TQ White II",
+  "license": "ISC",
+  "dependencies": {
+    "qtools-config-file-processor": "^1.0.10"
+  }
+}

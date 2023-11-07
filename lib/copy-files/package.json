@@ -1,7 +1,7 @@
 {
   "name": "copy-files",
   "version": "1.0.0",
-  "description": "execute rsync copy for selectedTransferSetList",
+  "description": "execute rsync copy for selectedActionSetList",
   "main": "copy-files.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
