@@ -18,6 +18,8 @@ const moduleFunction = function(args = {}) {
 	process.global = {};
 	process.global.xLog = xLog;
 
+	xLog.status('REMEMBER: .exclude exists, see superSecretCrypto');
+
 	const configSegmentName = require('path')
 		.basename(__filename)
 		.replace(/\.\w+$/, '');
